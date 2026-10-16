@@ -6,19 +6,19 @@
 
 # ---------- Stage 1: build - biên dịch & đóng gói bằng Gradle + JDK 21 ----------
 # Spring Boot 4 yêu cầu Gradle >= 8.14
-FROM openjdk:21-jdk-slim AS builder
+FROM gradle:jdk21 AS build
 WORKDIR /workspace
 
 # Copy build.gradle + settings.gradle trước, tải dependency để tận dụng cache layer
 COPY build.gradle settings.gradle ./
-RUN ./gradlew dependencies
+RUN gradle dependencies --no-daemon
 
 # Copy mã nguồn rồi đóng gói file JAR (bỏ qua test)
-COPY . ./src
-RUN ./gradlew build -x test
+COPY src ./src
+RUN gradle bootJar -x test --no-daemon
 
 # ---------- Stage 2: runtime - chỉ chứa JRE 21 + file JAR ----------
-FROM openjdk:21-jre-slim AS runtime
+FROM eclipse-temurin:21-jre-alpine AS runtime
 
 # Phiên bản ứng dụng truyền vào lúc build (docker compose: build-arg APP_VERSION)
 ARG APP_VERSION=dev
@@ -30,10 +30,10 @@ WORKDIR /app
 # Chạy ứng dụng bằng user thường, không dùng root
 RUN addgroup -S spring && adduser -S spring -G spring
 # Chỉ lấy file JAR từ stage build
-COPY --from=builder /workspace/build/libs/*.jar /app/app.jar
-USER spring
+COPY --from=build /workspace/build/libs/app.jar /app/app.jar
+USER spring:spring
 
 EXPOSE 8080
 
 # ENTRYPOINT dạng exec (mảng JSON)
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]

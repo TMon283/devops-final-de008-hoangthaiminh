@@ -42,7 +42,7 @@ services:
         APP_VERSION: ${APP_VERSION:-local}
     # TODO 2: tên image = <APP_IMAGE>:<APP_TAG>
     #         (mặc định APP_IMAGE=devops-final-app, APP_TAG=latest)
-    image: devops-final-app:latest
+    image: ${APP_IMAGE:-devops-final-app}:${APP_TAG:-latest}
     restart: unless-stopped
     environment:
       DB_HOST: mysql
